@@ -4,7 +4,7 @@ FROM    debian:buster
 # Fetching packages and installing
 RUN     apt update && \
         apt -y upgrade && \
-        apt install -y nginx mariadb-server php7.3-fpm php-mysql php-common php-mbstring vim unzip wget
+        apt install -y nginx mariadb-server php7.3-fpm php-mysql php-common php-mbstring vim unzip wget sendmail
 
 RUN rm -rf /usr/share/nginx/www
 
@@ -16,11 +16,8 @@ RUN     echo "<?php echo 'Current PHP version: ' . phpversion(); ?>" > /var/www/
 
 # Creating the mysql database
 RUN     service mysql start; \
-        # mysql -uroot mysql; \
-        # mysqladmin password "password"; \
         echo "CREATE DATABASE wordpress;" | mysql -u root; \
-        echo "GRANT ALL PRIVILEGES ON wordpress.* TO 'wordpress'@'localhost' IDENTIFIED BY 'password';" | mysql -u root; \
-        # echo "ALTER USER 'wordpress'@'localhost' IDENTIFIED WITH mysql_native_password BY 'password';" \
+        echo "GRANT ALL PRIVILEGES ON *.* TO 'vtenneke'@'localhost' IDENTIFIED BY 'password';" | mysql -u root; \
         echo "FLUSH PRIVILEGES" | mysql -u root
 
 # Make folder for ssl
@@ -28,12 +25,6 @@ RUN     mkdir ssl-cert
 COPY    srcs/localhost.cert /ssl-cert
 COPY    srcs/localhost.key /ssl-cert
 
-# Installing the latest version of Wordpress
-RUN     wget -c https://wordpress.org/latest.zip && \
-        unzip latest.zip && \
-        mkdir -p /var/www/localhost/wordpress && \
-        mv wordpress/* var/www/localhost/wordpress && \
-        rm latest.zip
 
 # Downloading the latest version of phpMyAdmin
 RUN     wget  -c https://files.phpmyadmin.net/phpMyAdmin/4.9.4/phpMyAdmin-4.9.4-english.tar.gz && \
@@ -42,25 +33,32 @@ RUN     wget  -c https://files.phpmyadmin.net/phpMyAdmin/4.9.4/phpMyAdmin-4.9.4-
         mv -v phpMyAdmin-4.9.4-english/* /var/www/localhost/phpmyadmin && \
         chmod -R 755 /var/www/localhost/phpmyadmin
 
-# RUN rm -rf /etc/nginx/sites-enabled/*
 # Copying the wordpress configuration to the container
-COPY    srcs/wp-config.php /var/www/localhost/wordpress/wp-config.php
 COPY    srcs/config.inc.php /var/www/localhost/phpmyadmin
 COPY    srcs/php.ini /etc/php/7.3/fpm/php.ini
 
-# RUN rm -rf /var/www/html/index.php
-# RUN echo "Hello Victor" > /var/www/html/index.php
-# RUN rm /etc/nginx/sites-enabled/default
-# RUN ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
+# Downloading and installing WP-CLI
+COPY srcs/my.cnf /etc/mysql/my.cnf
+RUN chmod -R 755 /var/run/mysqld
+RUN wget -c https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar && \
+    chmod +x wp-cli.phar && \
+    mv wp-cli.phar /usr/local/bin/wp
+RUN wp cli update
+RUN mkdir -p /var/www/localhost/wordpress
 
 # Changing the accessibility of files
 RUN		chown -R www-data:www-data /var/www/localhost/*
 RUN		chmod -R 755 /var/www/localhost/*
 
+RUN service mysql start && \
+wp core download --path=/var/www/localhost/wordpress --allow-root && \
+wp config create --path=/var/www/localhost/wordpress --dbname=wordpress --dbuser=vtenneke --dbpass=password --allow-root && \
+wp core install --path=/var/www/localhost/wordpress --url=localhost --title="Victor's ft_server" --admin_name=vtenneke --admin_password=password --admin_email=victor@tennekes.nl --allow-root && \
+chmod 644 /var/www/localhost/wordpress/wp-config.php && \
+wp theme install twentysixteen --path=/var/www/localhost/wordpress --activate --allow-root
+
 # Commands for starting the container
 CMD     service mysql start && \
         service php7.3-fpm start && \
         service nginx start && \
-        # MYSQL_PWD=guest mysqld && \
-        # nginx -g "daemon off;" && \
         bash
