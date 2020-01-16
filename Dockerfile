@@ -12,7 +12,8 @@ RUN rm -rf /usr/share/nginx/www
 RUN     mkdir -p /var/www/localhost
 COPY    srcs/nginx-host-conf /etc/nginx/sites-available/localhost
 RUN     ln -s /etc/nginx/sites-available/localhost /etc/nginx/sites-enabled
-RUN     echo "<?php echo 'Current PHP version: ' . phpversion(); ?>" > /var/www/localhost/index.php
+COPY    srcs/index.html /var/www/localhost/
+# RUN     echo "<?php echo 'Current PHP version: ' . phpversion(); ?>" > /var/www/localhost/index.php
 
 # Creating the mysql database
 RUN     service mysql start; \
