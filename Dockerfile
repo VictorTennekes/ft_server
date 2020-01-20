@@ -4,7 +4,8 @@ FROM    debian:buster
 # Fetching packages and installing
 RUN     apt update && \
         apt -y upgrade && \
-        apt install -y nginx mariadb-server php7.3-fpm php-mysql php-common php-mbstring vim unzip wget sendmail
+        apt install -y nginx mariadb-server vim unzip wget sendmail && \
+        apt install -y php7.3 php-mysql php-fpm php-cli php-mbstring php-curl php-gd php-intl php-soap php-xml php-xmlrpc php-zip
 
 RUN rm -rf /usr/share/nginx/www
 
@@ -30,9 +31,9 @@ COPY    srcs/localhost.key /ssl-cert
 # Downloading the latest version of phpMyAdmin
 RUN     wget  -c https://files.phpmyadmin.net/phpMyAdmin/4.9.4/phpMyAdmin-4.9.4-english.tar.gz && \
         tar -xzvf phpMyAdmin-4.9.4-english.tar.gz && \
-        mkdir -p /var/www/localhost/phpmyadmin && \
-        mv -v phpMyAdmin-4.9.4-english/* /var/www/localhost/phpmyadmin && \
-        chmod -R 755 /var/www/localhost/phpmyadmin
+        mkdir -p /var/www/localhost/wordpress/phpmyadmin && \
+        mv -v phpMyAdmin-4.9.4-english/* /var/www/localhost/wordpress/phpmyadmin && \
+        chmod -R 755 /var/www/localhost/wordpress/phpmyadmin
 
 # Copying the wordpress configuration to the container
 COPY    srcs/config.inc.php /var/www/localhost/phpmyadmin
@@ -47,16 +48,20 @@ RUN wget -c https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli
 RUN wp cli update
 RUN mkdir -p /var/www/localhost/wordpress
 
-# Changing the accessibility of files
-RUN		chown -R www-data:www-data /var/www/localhost/*
-RUN		chmod -R 755 /var/www/localhost/*
-
 RUN service mysql start && \
 wp core download --path=/var/www/localhost/wordpress --allow-root && \
 wp config create --path=/var/www/localhost/wordpress --dbname=wordpress --dbuser=vtenneke --dbpass=password --allow-root && \
 wp core install --path=/var/www/localhost/wordpress --url=localhost --title="Victor's ft_server" --admin_name=vtenneke --admin_password=password --admin_email=victor@tennekes.nl --allow-root && \
-chmod 644 /var/www/localhost/wordpress/wp-config.php && \
-wp theme install twentysixteen --path=/var/www/localhost/wordpress --activate --allow-root
+chmod 644 /var/www/localhost/wordpress/wp-config.php
+
+# Changing the accessibility of files
+RUN		chown -R www-data:www-data /var/www/localhost/*
+RUN		chmod -R 777 /var/www/localhost/wordpress
+RUN		chown -R 777 /var/www/localhost/wordpress
+
+RUN sed "68i define('FS_METHOD','direct');" /var/www/localhost/wordpress/wp-config.php
+
+EXPOSE 80 443 110
 
 # Commands for starting the container
 CMD     service mysql start && \

@@ -10,17 +10,21 @@ server {
 	listen 443 ssl;
 	listen [::]:443 ssl;
 
+	ssl on;
 	ssl_certificate /ssl-cert/localhost.cert;
 	ssl_certificate_key /ssl-cert/localhost.key;
 
-	root /var/www/localhost;
+	root /var/www/localhost/wordpress;
 
 	index index.html index.htm index.nginx-debian.html index.php;
+
+	client_max_body_size 11m;
 
     server_name localhost www.localhost;
 
 	location / {
-		try_files $uri $uri/ =404;
+		autoindex	on;
+		try_files	$uri $uri/ =404;
 	}
 
 	location ~ \.php$ {
