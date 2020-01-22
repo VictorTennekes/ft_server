@@ -15,7 +15,6 @@ RUN rm -rf /usr/share/nginx/www
 RUN     mkdir -p /var/www/localhost
 COPY    srcs/nginx-host-conf /etc/nginx/sites-available/localhost
 RUN     ln -s /etc/nginx/sites-available/localhost /etc/nginx/sites-enabled
-COPY    srcs/index.html /var/www/localhost/
 
 # Creating the mysql database
 RUN     service mysql start; \
@@ -64,7 +63,7 @@ chmod 644 /var/www/localhost/wordpress/wp-config.php
 
 # Changing the accessibility of files
 RUN		chown -R www-data:www-data /var/www/localhost/*
-RUN		chmod -R 777 /var/www/localhost/wordpress
+RUN		chmod -R 755 /var/www/localhost/wordpress
 
 # Removing the FTP prompt when installing themes and/or plugins
 RUN sed -i "68i define('FS_METHOD','direct');" /var/www/localhost/wordpress/wp-config.php
